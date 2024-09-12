@@ -3,3 +3,8 @@ Para executar (nessa ordem):
 python3 servidor_ativo.py
 python3 balanceador.py
 python3 cliente.py
+
+Para executar o exemplo da pasta "exemplo_ambiente_docker" (é necessário Docker):
+docker-compose up --build
+java Cliente.java
+python cliente.py
