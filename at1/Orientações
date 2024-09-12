@@ -1,0 +1,5 @@
+Para executar (nessa ordem): 
+
+- python3 servidor_ativo.py
+- python3 balanceador.py
+- python3 cliente.py
