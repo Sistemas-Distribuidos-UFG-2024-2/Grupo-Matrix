@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  balanceador:
+    build:
+      context: ./balanceador  
+      dockerfile: Dockerfile
+    container_name: balanceador-1
+    ports:
+      - "5000:5000" 
+    depends_on:
+      - servidor1
+      - servidor2
+      - servidor3
+
+  servidor1:
+    build:
+      context: ./servidor  
+      dockerfile: Dockerfile
+    container_name: servidor-1
+    ports:
+      - "5002:5002"  
+    environment:
+      - SERVER_PORT=5002
+
+  servidor2:
+    build:
+      context: ./servidor  
+      dockerfile: Dockerfile
+    container_name: servidor-2
+    ports:
+      - "5003:5003"  
+    environment:
+      - SERVER_PORT=5003
+
+  servidor3:
+    build:
+      context: ./servidor  
+      dockerfile: Dockerfile
+    container_name: servidor-3
+    ports:
+      - "5004:5004"  
+    environment:
+      - SERVER_PORT=5004
