@@ -2,7 +2,7 @@ import socket
 import os
 
 def servidor():
-    server_port = int(os.getenv("SERVER_PORT", "5002"))  
+    server_port = int(os.getenv("SERVER_PORT", "5002"))  # Para rodar 3 servidores sem docker, faça mais 2 cópias desse arquivo e mude a porta deles
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s4:
         s4.bind(('0.0.0.0', server_port))
