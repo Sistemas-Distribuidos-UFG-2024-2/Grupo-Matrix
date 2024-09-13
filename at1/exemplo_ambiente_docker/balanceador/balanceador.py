@@ -1,7 +1,7 @@
 import socket
 
 servidores = {
-    'servidor1': ('servidor1', 5002),  # Nome do serviço Docker Compose e porta
+    'servidor1': ('servidor1', 5002),  # Nome do serviço Docker Compose e porta #ao rodar sem docker crie 3 arquivo servidor, mude para '127.0.0.1'
     'servidor2': ('servidor2', 5003),
     'servidor3': ('servidor3', 5004)
 }
