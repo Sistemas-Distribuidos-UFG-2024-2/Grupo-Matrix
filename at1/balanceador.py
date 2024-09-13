@@ -24,13 +24,13 @@ def balanceador():
                 print(f"Falha ao conectar ao servidor 1 {s3_ip}:{s3_port}. Tentando com servidor 2...")
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s4:
                     s4.connect((s4_ip, s4_port))
-                    print(f"Conectado ao servidor 2 {s4_ip}:{s4_port}")
+                    print(f"Conectado ao servidor {s4_ip}:{s4_port}")
                     s4.sendall(data)
                     print(f"Balanceador enviou '{data.decode()}' para {s4_ip}:{s4_port}")
                     resposta = s4.recv(1024)
-                    print(f"Balanceador (S2) recebeu '{resposta.decode()}' de {s4_ip}:{s4_port}")
+                    print(f"Balanceador recebeu '{resposta.decode()}' de {s4_ip}:{s4_port}")
                     conn.sendall(resposta)
-                    print(f"Balanceador (S2) enviou '{resposta.decode()}' de volta para {addr[0]}:{addr[1]}")
+                    print(f"Balanceador enviou '{resposta.decode()}' de volta para {addr[0]}:{addr[1]}")
 
 if __name__ == "__main__":
     balanceador()
