@@ -2,10 +2,10 @@ import socket
 import os
 
 def servidor():
-    server_port = int(os.getenv("SERVER_PORT", "5002"))  
+    server_port = int(os.getenv("SERVER_PORT", "5003"))  
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s4:
-        s4.bind(('0.0.0.0', 5002))
+        s4.bind(('0.0.0.0', 5003))
         s4.listen()
         print(f"Servidor iniciado na porta {server_port} e aguardando conexões...")
 
