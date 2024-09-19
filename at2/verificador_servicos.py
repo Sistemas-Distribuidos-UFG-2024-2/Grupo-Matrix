@@ -2,54 +2,48 @@ import socket
 import threading
 import time
 
-servidores_ativos = []  # Lista dos servidores ativos 
+servidores_ativos = []  # Lista dos servidores ativos (ip, porta)
 
 def registrar_servidor():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as verificador:
         verificador.bind(('127.0.0.1', 6000))  # Porta para servidores
         verificador.listen()
+        print("Verificador aguardando registros de servidores...")
+
         while True:
             conn, addr = verificador.accept()
             with conn:
-                data = conn.recv(1024).decode()
-                ip, porta = data.split(':')  # Recebe diretamente o IP e porta
-                servidores_ativos.append((ip, int(porta)))  # Adiciona o servidor (IP, porta) à lista de servidores ativos
-                print(f"Servidor {ip}:{porta} registrou como ativo.")
-                
-def verificar_servidor(ip, porta):
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(2)  # Se o socket não conseguir estabelecer uma conexão, uma exceção socket.timeout será lançada
-            s.connect((ip, porta))  # Usa a porta recebida do servidor
-            return True
-    except socket.error:
-        return False
+                servidor_info = conn.recv(1024).decode()  # Recebe IP e porta do servidor
+                ip, porta = servidor_info.split(':')  # Extrai IP e porta
+                servidores_ativos.append((ip, int(porta)))  # Adiciona o servidor na lista
+                print(f"Servidor {ip}:{porta} registrado.")
 
 def atender_balanceador():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as verificador:
         verificador.bind(('127.0.0.1', 6001))  # Porta para balanceador
         verificador.listen()
+        print("Verificador aguardando conexões do balanceador...")
+
         while True:
             conn, addr = verificador.accept()
             with conn:
-                if servidores_ativos:
-                    for ip, porta in servidores_ativos: 
-                        if verificar_servidor(ip, porta):  # Chama a função para verificar se está realmente ativo
-                            conn.sendall(f'{ip}:{porta}'.encode())  # Se estiver ativo, envia IP e porta para o balanceador
-                            print(f"Verificador de serviços enviou o IP {ip}:{porta} ao balanceador.")
-                            break
-                        else:
-                            servidores_ativos.remove((ip, porta))  # Se não estiver ativo, remove o IP e porta da lista
-                            print(f"Servidor {ip}:{porta} removido da lista.")
+                if servidores_ativos: # Se tiver servidores na lista
+                    for ip, porta in servidores_ativos:
+                        try:
+                            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                                s.settimeout(2) # Se não conseguir conectar ao servidor, lança socket.timeout
+                                s.connect((ip, porta))
+                                conn.sendall(f'{ip}:{porta}'.encode())  # Envia IP e porta ao balanceador
+                                print(f"Verificador enviou {ip}:{porta} ao balanceador.")
+                                break
+                        except socket.error:
+                            servidores_ativos.remove((ip, porta))  # Remove servidor inativo
+                            print(f"Servidor {ip}:{porta} removido.")
                 else:
                     conn.sendall(b'Nenhum servidor ativo.')
 
-def verificador_servicos():
-    thread_registrar = threading.Thread(target=registrar_servidor)
-    thread_balanceador = threading.Thread(target=atender_balanceador)
+def iniciar_verificador():
+    threading.Thread(target=registrar_servidor).start()  # Thread para registro de servidores
+    threading.Thread(target=atender_balanceador).start()  # Thread para atender o balanceador
 
-    thread_registrar.start()
-    thread_balanceador.start()
-
-
-verificador_servicos()
+iniciar_verificador()
