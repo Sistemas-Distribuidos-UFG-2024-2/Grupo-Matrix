@@ -2,7 +2,7 @@ import socket
 import threading
 import time
 
-servidores_ativos = []  # Lista dos servidores ativos (ip, porta)
+servidores_ativos = []   # Lista dos servidores ativos (ip, porta)
 
 def registrar_servidor():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as verificador:
