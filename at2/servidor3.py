@@ -2,7 +2,7 @@ import socket
 import threading
 
 ip_servidor = '127.0.0.1'
-porta_servidor = 5002  
+porta_servidor = 5004 
 
 def notificar_verificador_de_servicos():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
