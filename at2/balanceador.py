@@ -31,7 +31,7 @@ def conectar_cliente(conn, addr):
                 print(f"Balanceador enviou resposta '{resposta.decode()}' de volta ao cliente.")
         else:
             print("Nenhum servidor ativo disponível.")
-            conn.sendall(b'Nenhum servidor ativo disponível.')
+            conn.sendall(f'Nenhum servidor ativo disponível.')
 
     conn.close()  # Fecha a conexão com o cliente
     print(f"Conexão com o cliente {addr[0]}:{addr[1]} encerrada.")
