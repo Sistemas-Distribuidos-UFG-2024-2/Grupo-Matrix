@@ -1,20 +1,17 @@
 import socket
 import threading
-import time
 
 ip_servidor = '127.0.0.1'
 porta_servidor = 5002  
 
 def notificar_verificador_de_servicos():
-    while True:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
-            try:
-                servidor.connect(('127.0.0.1', 6000))  
-                mensagem = f'{ip_servidor}:{porta_servidor}'  # Envia IP e porta para o verificador
-                servidor.sendall(mensagem.encode())  
-            except ConnectionRefusedError:
-                print("Não foi possível conectar ao verificador de serviços.")
-            time.sleep(5)  # Notifica o verificador a cada 5 segundos
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
+        try:
+            servidor.connect(('127.0.0.1', 6000))  
+            mensagem = f'{ip_servidor}:{porta_servidor}'  # Envia IP e porta para o verificador
+            servidor.sendall(mensagem.encode())  
+        except ConnectionRefusedError:
+            print("Não foi possível conectar ao verificador de serviços.")
 
 def servidor():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -33,5 +30,5 @@ def conectar_balanceador(conn, addr):
             conn.sendall(b'world!')  # Envia resposta ao cliente
             print(f"Servidor {porta_servidor} enviou 'world!' para {addr[0]}:{addr[1]}")
 
-threading.Thread(target=notificar_verificador_de_servicos).start()
+notificar_verificador_de_servicos()
 servidor()
