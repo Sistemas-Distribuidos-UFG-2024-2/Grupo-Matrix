@@ -1,0 +1,9 @@
+javac PesoIdeal.java PesoIdealImpl.java ServidorRMI.java
+
+rmiregistry 1099
+
+java ServidorRMI
+
+javac ClienteRMI.java
+
+java ClienteRMI
