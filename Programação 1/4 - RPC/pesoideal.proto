@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+// Definição do serviço
+service PesoIdealService {
+    // Método RPC para calcular o peso ideal
+    rpc CalcularPesoIdeal (PesoIdealRequest) returns (PesoIdealResponse);
+}
+
+// Definição da requisição
+message PesoIdealRequest {
+    double altura = 1;
+    string sexo = 2;
+}
+
+// Definição da resposta
+message PesoIdealResponse {
+    double pesoIdeal = 1;
+}
