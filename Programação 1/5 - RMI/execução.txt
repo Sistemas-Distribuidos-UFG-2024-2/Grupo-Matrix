@@ -1,0 +1,7 @@
+javac ClassificacaoNadador.java ServidorRMI.java ClienteRMI.java
+
+rmiregistry
+
+java ServidorRMI
+
+java ClienteRMI
