@@ -1,8 +1,8 @@
 import time
-from xmlrpc.client import ServerProxy
+import requests
 import uuid
 
-proxy = ServerProxy("http://localhost:9000/")
+base_url = "http://localhost:80"
 
 def print_line(char='=', length=50):
     print(char * length)
@@ -51,22 +51,29 @@ def show_news_paginated(choice, page_size=5):
         print("Opção inválida. Tente novamente.")
         return
     
-    # Enviar requisição ao proxy para buscar notícias por categoria
-    request_id = str(uuid.uuid4())  # Gera um ID único para a requisição
-    proxy.enqueue_request(request_id, "buscar_noticias_por_categoria", categoria)
+    request_id = str(uuid.uuid4())  
+    response = requests.post(f"{base_url}/enqueue_request", json={
+        "request_id": request_id,
+        "method_name": "buscar_noticias_por_categoria",
+        "args": [categoria]
+    })
     
-    # Busca a resposta usando o request_id
+    if response.status_code != 200:
+        print("Erro ao enviar a requisição.")
+        return
+    
     while True:
-        response = proxy.get_response(request_id)
-        if response != "Resposta ainda não disponível. Tente novamente mais tarde.":
+        response = requests.get(f"{base_url}/get_response/{request_id}")
+        response_data = response.json().get("response", "Resposta ainda não disponível. Tente novamente mais tarde.")
+        if response_data != "Resposta ainda não disponível. Tente novamente mais tarde.":
             break
-        time.sleep(0.5)  # Espera antes de tentar novamente
+        time.sleep(0.5)  
 
-    if not isinstance(response, list) or not response:
+    if not isinstance(response_data, list) or not response_data:
         print("Nenhuma notícia encontrada para a categoria escolhida.")
         return
 
-    noticias = response
+    noticias = response_data
     total_news = len(noticias)
     current_page = 0
 
@@ -107,30 +114,38 @@ def show_news_paginated(choice, page_size=5):
             print("Opção inválida. Tente novamente.")
 
 def show_news_detail(news_id):
-    request_id = str(uuid.uuid4())  # Gera um ID único para a requisição
-    proxy.enqueue_request(request_id, "buscar_noticia_por_id", news_id)
+    request_id = str(uuid.uuid4())  
+    response = requests.post(f"{base_url}/enqueue_request", json={
+        "request_id": request_id,
+        "method_name": "buscar_noticia_por_id",
+        "args": [news_id]
+    })
     
-    # Busca a resposta usando o request_id
+    if response.status_code != 200:
+        print("Erro ao enviar a requisição.")
+        return
+    
+   
     while True:
-        response = proxy.get_response(request_id)
-        if response != "Resposta ainda não disponível. Tente novamente mais tarde.":
+        response = requests.get(f"{base_url}/get_response/{request_id}")
+        response_data = response.json().get("response", "Resposta ainda não disponível. Tente novamente mais tarde.")
+        if response_data != "Resposta ainda não disponível. Tente novamente mais tarde.":
             break
-        time.sleep(0.5)  # Espera antes de tentar novamente
+        time.sleep(0.5)  
 
-    if isinstance(response, dict):
+    if isinstance(response_data, dict):
         print("\n--- Detalhe da Notícia ---")
-        print(f"ID: {response['id']}")
-        print(f"Manchete: {response['manchete']}")
-        print(f"Subtítulo: {response['subtitulo']}")
-        print(f"Texto: {response['texto']}")
-        print(f"Data de Publicação: {response['data_publicacao']}")
-        print(f"Autor: {response['autor']}")
-        print(f"Classificação Etária: {response['classificacao_etaria']}")
+        print(f"ID: {response_data['id']}")
+        print(f"Manchete: {response_data['manchete']}")
+        print(f"Subtítulo: {response_data['subtitulo']}")
+        print(f"Texto: {response_data['texto']}")
+        print(f"Data de Publicação: {response_data['data_publicacao']}")
+        print(f"Autor: {response_data['autor']}")
+        print(f"Classificação Etária: {response_data['classificacao_etaria']}")
         print("-" * 50)
     else:
         print("Notícia não encontrada.")
         
-
 def main():
     name, birth_date = welcome_screen()
     while True:
