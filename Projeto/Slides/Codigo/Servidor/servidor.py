@@ -62,6 +62,14 @@ def listar_categorias():
     except (FileNotFoundError, KeyError):
         return jsonify({"erro": "Arquivo CSV não encontrado ou coluna ausente."}), 404
 
+@app.route('/noticias/categoria/<string:categoria>', methods=['GET'])
+def noticias_por_categoria(categoria):
+    resultado = buscar_noticias_por_categoria(categoria)
+    if isinstance(resultado, str): 
+        return jsonify({"erro": resultado}), 404
+    else:
+        return jsonify(resultado), 200
+
 # Função para registrar o servidor no Registro de Serviços
 def registrar_servico():
     try:
