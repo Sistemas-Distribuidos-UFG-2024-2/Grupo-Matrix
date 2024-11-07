@@ -8,6 +8,18 @@ app = Flask(__name__)
 
 arquivo_csv = 'noticias.csv'
 
+def buscar_noticias_por_categoria(categoria):
+    try:
+        df = pd.read_csv(arquivo_csv)
+        noticias_categoria = df[df['categoria'] == categoria]
+        
+        if noticias_categoria.empty:
+            return f"Não foram encontradas notícias na categoria '{categoria}'."
+        else:
+            return noticias_categoria.to_dict(orient='records')
+    except FileNotFoundError:
+        return "Arquivo CSV não encontrado."
+
 def criar_noticia(dados):
     with open(arquivo_csv, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
