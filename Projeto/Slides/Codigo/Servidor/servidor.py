@@ -83,6 +83,20 @@ def noticias_por_categoria(categoria):
     else:
         return jsonify(resultado), 200
 
+@app.route('/noticias/<int:id>', methods=['GET'])
+def obter_noticia_por_id(id):
+    try:
+        df = pd.read_csv(arquivo_csv)
+        noticia = df[df['id'] == id]
+        
+        if noticia.empty:
+            return jsonify({"erro": f"Notícia com ID {id} não encontrada."}), 404
+        else:
+            return jsonify(noticia.to_dict(orient='records')[0]), 200
+    except FileNotFoundError:
+        return jsonify({"erro": "Arquivo CSV não encontrado."}), 404
+
+
 def retornar_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
