@@ -2,7 +2,8 @@ import time
 import requests
 import uuid
 
-base_url = "http://localhost:80"
+# Base URL do servidor Flask
+base_url = "http://137.131.165.188:8001"
 
 def print_line(char='=', length=50):
     print(char * length)
@@ -54,7 +55,7 @@ def show_news_paginated(choice, page_size=5):
     request_id = str(uuid.uuid4())  
     response = requests.post(f"{base_url}/enqueue_request", json={
         "request_id": request_id,
-        "method_name": "buscar_noticias_por_categoria",
+        "method_name": "/noticias/categoria/",
         "args": [categoria]
     })
     
@@ -117,7 +118,7 @@ def show_news_detail(news_id):
     request_id = str(uuid.uuid4())  
     response = requests.post(f"{base_url}/enqueue_request", json={
         "request_id": request_id,
-        "method_name": "buscar_noticia_por_id",
+        "method_name": "/noticias/",
         "args": [news_id]
     })
     
