@@ -8,7 +8,10 @@ import socket
 app = Flask(__name__)
 
 # Obter URL do banco de dados do ambiente
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = "postgresql://postgres:yUKoPJVmAlvAozhYAtbcKgsfhBufYYEp@junction.proxy.rlwy.net:55484/railway"
+
+# Nome do arquivo CSV com as notícias
+arquivo_csv = "noticias.csv"
 
 # Configurar conexão global
 try:
@@ -18,6 +21,41 @@ try:
 except Exception as e:
     print("Erro ao conectar ao banco de dados:", e)
     conn = None
+
+# Importar csv para o banco quando o servidor subir
+def importar_csv_para_banco():
+    try:
+        # Criar conexão com o banco
+        engine = create_engine(DATABASE_URL)
+        conn = engine.connect()
+
+        # Ler o CSV com pandas
+        df = pd.read_csv(arquivo_csv)
+
+        # Renomear colunas para corresponderem à tabela do banco
+        df = df.rename(columns={
+            "id": "id",
+            "manchete": "manchete",
+            "subtitulo": "subtitulo",
+            "texto": "texto",
+            "data_publicacao": "data_publicacao",
+            "autor": "autor",
+            "classificacao_etaria": "classificacao_etaria",
+            "categoria": "categoria"
+        })
+
+        # Inserir os dados no banco
+        df.to_sql('noticia', con=conn, if_exists='append', index=False)
+
+        print("Dados do CSV importados com sucesso!")
+    except exc.IntegrityError:
+        print("Os dados já foram importados. Nenhuma duplicação foi feita.")
+    except FileNotFoundError:
+        print(f"Erro: Arquivo {arquivo_csv} não encontrado.")
+    except Exception as e:
+        print(f"Erro ao importar dados: {e}")
+    finally:
+        conn.close()
 
 @app.route('/noticias', methods=['POST'])
 def criar_noticia():
@@ -144,5 +182,6 @@ def registrar_servico():
         print(f"Erro ao registrar serviço: {e}")
 
 if __name__ == "__main__":
+    importar_csv_para_banco()
     registrar_servico()
     app.run(host="0.0.0.0", port=9000)
