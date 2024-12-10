@@ -4,12 +4,16 @@ import csv
 import requests
 import threading
 import socket
+import psycopg2
 import os
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Text
+from sqlalchemy.exc import IntegrityError
+
 
 app = Flask(__name__)
 
 # Obter URL do banco de dados do ambiente
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = "postgresql://postgres:eZVzVdurIuuAouQpqEGeiswWNEZPZvxu@autorack.proxy.rlwy.net:50513/railway"
 
 # Nome do arquivo CSV com as notícias
 arquivo_csv = "noticias.csv"
