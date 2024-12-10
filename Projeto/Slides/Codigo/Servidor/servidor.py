@@ -48,13 +48,25 @@ def criar_tabela(engine):
     metadata.create_all(engine)
     print("Tabela `noticia` criada/verificada com sucesso!")
 
+# Deletar registros anteriores do banco
+def deletar_registros():
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM noticia")
+            conn.commit()  # Confirmar a transação
+            print("Todas as notícias antigas foram excluídas com sucesso!")
+    except Exception as e:
+        conn.rollback()  # Caso haja erro, desfazemos a transação
+        print(f"Erro ao deletar registros: {e}")
+
+
 # Importar csv para o banco quando o servidor subir
 def importar_csv_para_banco():
     try:
         # Criar conexão com o banco
         engine = create_engine(DATABASE_URL)
         conn = engine.connect()
-
+        
         # Criar/verificar a tabela
         criar_tabela(engine)
 
