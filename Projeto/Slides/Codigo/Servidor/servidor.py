@@ -55,9 +55,14 @@ def importar_csv_para_banco():
         engine = create_engine(DATABASE_URL)
         conn = engine.connect()
 
-         # Criar/verificar a tabela
+        # Criar/verificar a tabela
         criar_tabela(engine)
         
+        # Deletar todas as notícias anteriores no banco
+        with conn.begin():
+            conn.execute("DELETE FROM noticia")
+            print("Todas as notícias antigas foram excluídas com sucesso!")
+
         # Ler o CSV com pandas
         df = pd.read_csv(arquivo_csv)
 
@@ -77,10 +82,6 @@ def importar_csv_para_banco():
         df.to_sql('noticia', con=conn, if_exists='append', index=False)
 
         print("Dados do CSV importados com sucesso!")
-    except exc.IntegrityError:
-        print("Os dados já foram importados. Nenhuma duplicação foi feita.")
-    except FileNotFoundError:
-        print(f"Erro: Arquivo {arquivo_csv} não encontrado.")
     except Exception as e:
         print(f"Erro ao importar dados: {e}")
     finally:
