@@ -88,11 +88,11 @@ def criar_noticia():
     try:
         with conn.cursor() as cursor:
             query = """
-                INSERT INTO noticia (id, manchete, subtitulo, texto, data_publicacao, autor, classificacao_etaria, categoria)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO noticia (manchete, subtitulo, texto, data_publicacao, autor, classificacao_etaria, categoria)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             cursor.execute(query, (
-                dados["id"], dados["manchete"], dados["subtitulo"], dados["texto"],
+                dados["manchete"], dados["subtitulo"], dados["texto"],
                 dados["data_publicacao"], dados["autor"], dados["classificacao_etaria"], dados["categoria"]
             ))
             conn.commit()
