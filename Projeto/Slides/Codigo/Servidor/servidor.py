@@ -57,11 +57,6 @@ def importar_csv_para_banco():
 
         # Criar/verificar a tabela
         criar_tabela(engine)
-        
-        # Deletar todas as notícias anteriores no banco
-        with conn.begin():
-            conn.execute("DELETE FROM noticia")
-            print("Todas as notícias antigas foram excluídas com sucesso!")
 
         # Ler o CSV com pandas
         df = pd.read_csv(arquivo_csv)
