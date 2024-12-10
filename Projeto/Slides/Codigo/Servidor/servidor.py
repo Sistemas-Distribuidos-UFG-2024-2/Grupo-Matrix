@@ -3,6 +3,7 @@ import pandas as pd
 import csv
 import requests
 import threading
+import socket
 
 app = Flask(__name__)
 
@@ -82,11 +83,18 @@ def noticias_por_categoria(categoria):
     else:
         return jsonify(resultado), 200
 
+def retornar_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
+
 # Função para registrar o servidor no Registro de Serviços
 def registrar_servico():
     try:
-        resposta = requests.post("https://registro-de-servicos.up.railway.app/registrar_servidor", json={
-            "ip": "servidor-matrix.up.railway.app",
+        resposta = requests.post("http://localhost:8080/registrar-servidor", json={
+            "ip": retornar_ip(),
             "localizacao": "Brasil",
             "threads": threading.active_count()
         })
@@ -96,4 +104,4 @@ def registrar_servico():
 
 if __name__ == "__main__":
     registrar_servico()
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=9000)
