@@ -3,7 +3,7 @@ import requests
 import uuid
 
 # Base URL do servidor Flask
-base_url = "http://137.131.165.188:8001"
+base_url = "http://136.248.75.174:8001"
 
 def print_line(char='=', length=50):
     print(char * length)
@@ -132,7 +132,7 @@ def show_news_detail(news_id):
         response_data = response.json().get("response", "Resposta ainda não disponível. Tente novamente mais tarde.")
         if response_data != "Resposta ainda não disponível. Tente novamente mais tarde.":
             break
-        time.sleep(0.5)  
+        time.sleep(0.5) 
 
     if isinstance(response_data, dict):
         print("\n--- Detalhe da Notícia ---")
