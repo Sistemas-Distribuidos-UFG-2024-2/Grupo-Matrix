@@ -4,11 +4,12 @@ import csv
 import requests
 import threading
 import socket
+import os
 
 app = Flask(__name__)
 
 # Obter URL do banco de dados do ambiente
-DATABASE_URL = "postgresql://postgres:yUKoPJVmAlvAozhYAtbcKgsfhBufYYEp@junction.proxy.rlwy.net:55484/railway"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Nome do arquivo CSV com as notícias
 arquivo_csv = "noticias.csv"
@@ -22,6 +23,27 @@ except Exception as e:
     print("Erro ao conectar ao banco de dados:", e)
     conn = None
 
+# Criar tabela no banco
+def criar_tabela(engine):
+    metadata = MetaData()
+
+    # Definição do esquema da tabela `noticia`
+    noticia_table = Table(
+        "noticia", metadata,
+        Column("id", Integer, primary_key=True, autoincrement=False),
+        Column("manchete", Text, nullable=False),
+        Column("subtitulo", Text),
+        Column("texto", Text, nullable=False),
+        Column("data_publicacao", Text, nullable=False),
+        Column("autor", Text, nullable=False),
+        Column("classificacao_etaria", Text, nullable=False),
+        Column("categoria", Text, nullable=False)
+    )
+
+    # Criar a tabela no banco de dados, se ainda não existir
+    metadata.create_all(engine)
+    print("Tabela `noticia` criada/verificada com sucesso!")
+
 # Importar csv para o banco quando o servidor subir
 def importar_csv_para_banco():
     try:
@@ -29,6 +51,9 @@ def importar_csv_para_banco():
         engine = create_engine(DATABASE_URL)
         conn = engine.connect()
 
+         # Criar/verificar a tabela
+        criar_tabela(engine)
+        
         # Ler o CSV com pandas
         df = pd.read_csv(arquivo_csv)
 
