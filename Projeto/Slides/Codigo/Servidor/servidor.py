@@ -7,94 +7,121 @@ import socket
 
 app = Flask(__name__)
 
-arquivo_csv = 'noticias.csv'
+# Obter URL do banco de dados do ambiente
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-def buscar_noticias_por_categoria(categoria):
-    try:
-        df = pd.read_csv(arquivo_csv)
-        noticias_categoria = df[df['categoria'] == categoria]
-        
-        if noticias_categoria.empty:
-            return f"Não foram encontradas notícias na categoria '{categoria}'."
-        else:
-            return noticias_categoria.to_dict(orient='records')
-    except FileNotFoundError:
-        return "Arquivo CSV não encontrado."
-
-def criar_noticia(dados):
-    with open(arquivo_csv, mode='a', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow([dados["id"], dados["manchete"], dados["subtitulo"], dados["texto"], dados["data_publicacao"], dados["autor"], dados["classificacao_etaria"], dados["categoria"]])
-    return "Notícia criada com sucesso."
+# Configurar conexão global
+try:
+    conn = psycopg2.connect(DATABASE_URL)
+    cursor = conn.cursor()
+    print("Conexão com o banco de dados PostgreSQL estabelecida!")
+except Exception as e:
+    print("Erro ao conectar ao banco de dados:", e)
+    conn = None
 
 @app.route('/noticias', methods=['POST'])
-def endpoint_criar_noticia():
+def criar_noticia():
     dados = request.json
-    return jsonify(criar_noticia(dados)), 201
+    try:
+        with conn.cursor() as cursor:
+            query = """
+                INSERT INTO noticia (id, manchete, subtitulo, texto, data_publicacao, autor, classificacao_etaria, categoria)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(query, (
+                dados["id"], dados["manchete"], dados["subtitulo"], dados["texto"],
+                dados["data_publicacao"], dados["autor"], dados["classificacao_etaria"], dados["categoria"]
+            ))
+            conn.commit()
+        return jsonify({"message": "Notícia criada com sucesso."}), 201
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": f"Erro ao criar notícia: {e}"}), 500
 
 @app.route('/noticias', methods=['GET'])
 def ler_noticias():
     try:
-        df = pd.read_csv(arquivo_csv)
-        return jsonify(df.to_dict(orient='records'))
-    except FileNotFoundError:
-        return jsonify({"erro": "Arquivo CSV não encontrado."}), 404
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM noticia")
+            rows = cursor.fetchall()
+            colunas = [desc[0] for desc in cursor.description]
+            noticias = [dict(zip(colunas, row)) for row in rows]
+        return jsonify(noticias), 200
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao listar notícias: {e}"}), 500
 
 @app.route('/noticias/<int:id>', methods=['PUT'])
 def atualizar_noticia(id):
     dados = request.json
     try:
-        df = pd.read_csv(arquivo_csv)
-        if id in df['id'].values:
-            index = df.index[df['id'] == id].tolist()[0]
-            for key, value in dados.items():
-                df.at[index, key] = value
-            df.to_csv(arquivo_csv, index=False)
-            return jsonify({"message": f"Notícia com ID {id} atualizada com sucesso."})
-        else:
-            return jsonify({"erro": "ID não encontrado."}), 404
-    except FileNotFoundError:
-        return jsonify({"erro": "Arquivo CSV não encontrado."}), 404
+        with conn.cursor() as cursor:
+            # Gerar o comando SQL dinamicamente com base nos campos fornecidos
+            campos = ", ".join([f"{key} = %s" for key in dados.keys()])
+            valores = list(dados.values()) + [id]
+            query = f"UPDATE noticia SET {campos} WHERE id = %s"
+            cursor.execute(query, valores)
+            conn.commit()
+            if cursor.rowcount == 0:
+                return jsonify({"erro": "ID não encontrado."}), 404
+        return jsonify({"message": f"Notícia com ID {id} atualizada com sucesso."}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": f"Erro ao atualizar notícia: {e}"}), 500
 
 @app.route('/noticias/<int:id>', methods=['DELETE'])
 def deletar_noticia(id):
     try:
-        df = pd.read_csv(arquivo_csv)
-        df = df[df['id'] != id]
-        df.to_csv(arquivo_csv, index=False)
-        return jsonify({"message": f"Notícia com ID {id} deletada com sucesso."})
-    except FileNotFoundError:
-        return jsonify({"erro": "Arquivo CSV não encontrado."}), 404
+        with conn.cursor() as cursor:
+            query = "DELETE FROM noticia WHERE id = %s"
+            cursor.execute(query, (id,))
+            conn.commit()
+            if cursor.rowcount == 0:
+                return jsonify({"erro": "ID não encontrado."}), 404
+        return jsonify({"message": f"Notícia com ID {id} deletada com sucesso."}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": f"Erro ao deletar notícia: {e}"}), 500
 
 @app.route('/categorias', methods=['GET'])
 def listar_categorias():
     try:
-        df = pd.read_csv(arquivo_csv)
-        categorias = df['categoria'].unique().tolist()
-        return jsonify(categorias)
-    except (FileNotFoundError, KeyError):
-        return jsonify({"erro": "Arquivo CSV não encontrado ou coluna ausente."}), 404
+        with conn.cursor() as cursor:
+            query = "SELECT DISTINCT categoria FROM noticia"
+            cursor.execute(query)
+            categorias = [row[0] for row in cursor.fetchall()]
+        return jsonify(categorias), 200
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao listar categorias: {e}"}), 500
 
 @app.route('/noticias/categoria/<string:categoria>', methods=['GET'])
 def noticias_por_categoria(categoria):
-    resultado = buscar_noticias_por_categoria(categoria)
-    if isinstance(resultado, str): 
-        return jsonify({"erro": resultado}), 404
-    else:
-        return jsonify(resultado), 200
+    try:
+        with conn.cursor() as cursor:
+            query = "SELECT * FROM noticia WHERE categoria = %s"
+            cursor.execute(query, (categoria,))
+            rows = cursor.fetchall()
+            if not rows:
+                return jsonify({"erro": f"Não foram encontradas notícias na categoria '{categoria}'."}), 404
+            colunas = [desc[0] for desc in cursor.description]
+            noticias = [dict(zip(colunas, row)) for row in rows]
+        return jsonify(noticias), 200
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar notícias por categoria: {e}"}), 500
 
 @app.route('/noticias/<int:id>', methods=['GET'])
 def obter_noticia_por_id(id):
     try:
-        df = pd.read_csv(arquivo_csv)
-        noticia = df[df['id'] == id]
-        
-        if noticia.empty:
-            return jsonify({"erro": f"Notícia com ID {id} não encontrada."}), 404
-        else:
-            return jsonify(noticia.to_dict(orient='records')[0]), 200
-    except FileNotFoundError:
-        return jsonify({"erro": "Arquivo CSV não encontrado."}), 404
+        with conn.cursor() as cursor:
+            query = "SELECT * FROM noticia WHERE id = %s"
+            cursor.execute(query, (id,))
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({"erro": f"Notícia com ID {id} não encontrada."}), 404
+            colunas = [desc[0] for desc in cursor.description]
+            noticia = dict(zip(colunas, row))
+        return jsonify(noticia), 200
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar notícia: {e}"}), 500
 
 
 def retornar_ip():
