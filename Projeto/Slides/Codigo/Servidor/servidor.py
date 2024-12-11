@@ -75,7 +75,6 @@ def importar_csv_para_banco():
 
         # Renomear colunas para corresponderem à tabela do banco
         df = df.rename(columns={
-            "id": "id",
             "manchete": "manchete",
             "subtitulo": "subtitulo",
             "texto": "texto",
