@@ -5,9 +5,27 @@ import requests
 import time
 
 app = Flask(__name__)
-servidor_url = "http://localhost:9000/"  # URL do servidor remoto
+
+
+balanceador_url = "https://balanceador.up.railway.app/balancear"
+servidor_url = None 
+def definir_servidor_url():
+    global servidor_url
+    try:
+        response = requests.get(balanceador_url)
+        response.raise_for_status()
+        servidor_url = response.json().get("ip")
+        print(f"Servidor URL definido para: {servidor_url}")
+    except Exception as e:
+        print(f"Erro ao acessar o balanceador: {e}")
+        servidor_url = None
+    print(servidor_url)
+
+
+definir_servidor_url()
+
 request_queue = Queue()
-response_dict = {}  # Dicionário para armazenar respostas
+response_dict = {}  
 
 def enqueue_request(request_id, method_name, *args):
     """Função que enfileira requisições."""
@@ -28,12 +46,15 @@ def process_queue():
             method_name = request_data["method_name"]
             args = request_data["args"]
             try:
-                # Faz a chamada HTTP para o servidor remoto usando REST
-                response = requests.get(f"{servidor_url}{method_name}{args[0]}", json=args)
-                response_dict[request_id] = response.json()  # Armazena a resposta no dicionário
+                if not servidor_url:
+                    definir_servidor_url()
+
+               
+                response = requests.get(f"{servidor_url}/{method_name}{args[0]}", json=args)
+                response_dict[request_id] = response.json()  
                 print(f"Requisição processada: {method_name} - Resposta armazenada para request_id {request_id}")
             except Exception as e:
-                response_dict[request_id] = f"Erro: {e}"  # Armazena o erro no dicionário
+                response_dict[request_id] = f"Erro: {e}"  
                 print(f"Erro ao processar requisição {method_name}: {e}")
             finally:
                 request_queue.task_done()
@@ -55,9 +76,9 @@ def handle_get_response(request_id):
     return jsonify({"response": response})
 
 if __name__ == "__main__":
-    # Inicia a thread para processar a fila de requisições
+   
     thread = Thread(target=process_queue, daemon=True)
     thread.start()
 
-    # Inicia o servidor Flask na porta 9000
+   
     app.run(host="0.0.0.0", port=8001)
