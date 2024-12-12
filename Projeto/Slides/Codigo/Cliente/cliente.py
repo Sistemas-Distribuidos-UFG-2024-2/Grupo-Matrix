@@ -3,7 +3,7 @@ import requests
 import uuid
 
 # Base URL do servidor Flask
-base_url = "http://136.248.75.174:8001"
+base_url = "http://15.229.109.254:8001"
 
 def print_line(char='=', length=50):
     print(char * length)
