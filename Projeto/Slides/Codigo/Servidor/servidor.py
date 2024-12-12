@@ -6,14 +6,14 @@ import threading
 import socket
 import psycopg2
 import os
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Text
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, text
 from sqlalchemy.exc import IntegrityError
 
 
 app = Flask(__name__)
 
 # Obter URL do banco de dados do ambiente
-DATABASE_URL = "postgresql://postgres:kdfNyyzbNrgukEMpumofykaheZOEjclt@junction.proxy.rlwy.net:25221/railway"
+DATABASE_URL = "postgresql://postgres:AzFShVYcrGPfpjajWolwKgFIIwquCtaR@junction.proxy.rlwy.net:58430/railway"
 
 # Nome do arquivo CSV com as notícias
 arquivo_csv = "noticias.csv"
@@ -28,25 +28,30 @@ except Exception as e:
     conn = None
 
 # Criar tabela no banco
-def criar_tabela(engine):
-    metadata = MetaData()
+# Criar tabela no banco
+def criar_tabela():
+    try:
+        # Usar a conexão global `conn`
+        with conn.cursor() as cursor:
 
-    # Definição do esquema da tabela `noticia`
-    noticia_table = Table(
-        "noticia", metadata,
-        Column("id", Integer, primary_key=True, autoincrement=True),
-        Column("manchete", Text, nullable=False),
-        Column("subtitulo", Text),
-        Column("texto", Text, nullable=False),
-        Column("data_publicacao", Text, nullable=False),
-        Column("autor", Text, nullable=False),
-        Column("classificacao_etaria", Text, nullable=False),
-        Column("categoria", Text, nullable=False)
-    )
-
-    # Criar a tabela no banco de dados, se ainda não existir
-    metadata.create_all(engine)
-    print("Tabela `noticia` criada/verificada com sucesso!")
+            # Cria a tabela novamente
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS noticia (
+                    id SERIAL PRIMARY KEY,  -- Usando SERIAL para auto incremento
+                    manchete TEXT NOT NULL,
+                    subtitulo TEXT,
+                    texto TEXT NOT NULL,
+                    data_publicacao TEXT NOT NULL,
+                    autor TEXT NOT NULL,
+                    classificacao_etaria TEXT NOT NULL,
+                    categoria TEXT NOT NULL
+                )
+            """)
+            conn.commit()  # Commit após criar a tabela
+        print("Tabela `noticia` criada/atualizada com sucesso!")
+    except Exception as e:
+        print(f"Erro ao criar a tabela: {e}")
+        conn.rollback()  # Caso haja algum erro, desfaz a transação
 
 # Deletar registros anteriores do banco
 def deletar_registros():
@@ -59,16 +64,11 @@ def deletar_registros():
         conn.rollback()  # Caso haja erro, desfazemos a transação
         print(f"Erro ao deletar registros: {e}")
 
-
 # Importar csv para o banco quando o servidor subir
 def importar_csv_para_banco():
     try:
-        # Criar conexão com o banco
-        engine = create_engine(DATABASE_URL)
-        conn = engine.connect()
-        
         # Criar/verificar a tabela
-        criar_tabela(engine)
+        criar_tabela()
 
         # Ler o CSV com pandas
         df = pd.read_csv(arquivo_csv)
@@ -84,19 +84,28 @@ def importar_csv_para_banco():
             "categoria": "categoria"
         })
 
-        # Inserir os dados no banco
-        df.to_sql('noticia', con=conn, if_exists='append', index=False)
+        # Remover a coluna "id" caso esteja presente no DataFrame
+        if "id" in df.columns:
+            df = df.drop(columns=["id"])
+        df = df.dropna()
 
+        # Iterar sobre cada linha e inserir no banco de dados
+        for _, row in df.iterrows():
+            dados = row.to_dict()
+            resposta = criar_noticia_bd(dados)
+            print(resposta)  # Pode ser útil para depuração
+            criar_noticia_bd(dados)
         print("Dados do CSV importados com sucesso!")
     except Exception as e:
         print(f"Erro ao importar dados: {e}")
-    finally:
-        conn.close()
 
-@app.route('/noticias', methods=['POST'])
-def criar_noticia():
-    dados = request.json
+def criar_noticia_bd(dados):
     try:
+        # Remover o campo 'id', pois o banco vai gerar automaticamente
+        if "id" in dados:
+            del dados["id"]
+
+        # Assumindo que a conexão conn já está estabelecida
         with conn.cursor() as cursor:
             query = """
                 INSERT INTO noticia (manchete, subtitulo, texto, data_publicacao, autor, classificacao_etaria, categoria)
@@ -107,10 +116,10 @@ def criar_noticia():
                 dados["data_publicacao"], dados["autor"], dados["classificacao_etaria"], dados["categoria"]
             ))
             conn.commit()
-        return jsonify({"message": "Notícia criada com sucesso."}), 201
+        return {"message": "Notícia criada com sucesso."}
     except Exception as e:
         conn.rollback()
-        return jsonify({"erro": f"Erro ao criar notícia: {e}"}), 500
+        return {"erro": f"Erro ao criar notícia: {e}"}
 
 @app.route('/noticias', methods=['GET'])
 def ler_noticias():
@@ -167,6 +176,17 @@ def listar_categorias():
     except Exception as e:
         return jsonify({"erro": f"Erro ao listar categorias: {e}"}), 500
 
+@app.route('/noticias/total', methods=['GET'])
+def contar_noticias():
+    try:
+        with conn.cursor() as cursor:
+            query = "SELECT COUNT(*) FROM noticia"
+            cursor.execute(query)
+            total = cursor.fetchone()[0]
+        return jsonify({"total_noticias": total}), 200
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao contar notícias: {e}"}), 500
+
 @app.route('/noticias/categoria/<string:categoria>', methods=['GET'])
 def noticias_por_categoria(categoria):
     try:
@@ -197,28 +217,34 @@ def obter_noticia_por_id(id):
     except Exception as e:
         return jsonify({"erro": f"Erro ao buscar notícia: {e}"}), 500
 
-
-def retornar_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip = s.getsockname()[0]
-    s.close()
-    return ip
-
 # Função para registrar o servidor no Registro de Serviços
-def registrar_servico():
+def registrar_servidor():
     try:
-        resposta = requests.post("http://localhost:8080/registrar-servidor", json={
-            "ip": retornar_ip(),
-            "localizacao": "Brasil",
-            "threads": threading.active_count()
+        # IP do servidor de registro
+        ip_registro_de_servicos = "https://registro-de-servicos.up.railway.app"  # Endereço do serviço de registro
+        ip_servidor = "https://servidor-matrix.up.railway.app"
+        threads = threading.active_count()  # Número de threads ativas no servidor
+
+        # Requisição POST para registrar o servidor no servidor de registro
+        resposta = requests.post(f"{ip_registro_de_servicos}/registrar-servidor", json={
+            "ip": ip_servidor,
+            "threads": threads
         })
-        print("Serviço registrado:", resposta.json())
+
+        if resposta.status_code == 200:
+            print(f"Servidor registrado com sucesso: {resposta.json()}")
+        else:
+            print(f"Erro ao registrar servidor: {resposta.status_code} - {resposta.text}")
     except Exception as e:
-        print(f"Erro ao registrar serviço: {e}")
+        print(f"Erro ao registrar o servidor: {e}")
+
+@app.route("/get_threads", methods=["GET"])
+def get_threads():
+    # Retorna o número de threads ativas no servidor
+    return jsonify({"threads": threading.active_count()}), 200
 
 if __name__ == "__main__":
     importar_csv_para_banco()
-    deletar_registros()
-    registrar_servico()
-    app.run(host="0.0.0.0", port=9000)
+    registrar_servidor()
+    port = int(os.getenv("PORT", 9000))
+    app.run(host="0.0.0.0", port=port)
